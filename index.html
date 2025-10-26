@@ -323,6 +323,82 @@
             </div>
         </div>
 
+
+        <!-- Grocery List UI -->
+<div id="groceryUI">
+    <h3>Grocery List</h3>
+    <input type="text" id="groceryNewItem" placeholder="Enter item name">
+    <button id="addGroceryItem">Add Item</button>
+    <div id="groceryList"></div>
+    <button id="assignGrocery" style="margin-top:10px;">Assign Selected Items</button>
+</div>
+
+<script>
+    // --- Grocery List storage ---
+    let groceryList = []; // {id, name, amount}
+
+    const groceryNewItem = document.getElementById('groceryNewItem');
+    const addGroceryItemBtn = document.getElementById('addGroceryItem');
+    const groceryListDiv = document.getElementById('groceryList');
+    const assignGroceryBtn = document.getElementById('assignGrocery');
+
+    function renderGrocery() {
+        groceryListDiv.innerHTML = '';
+        if(!groceryList.length) {
+            groceryListDiv.innerHTML = '<div class="empty">No items in grocery list.</div>';
+            return;
+        }
+        groceryList.forEach(item => {
+            const node = document.createElement('div');
+            node.style.display = 'flex'; node.style.alignItems = 'center'; node.style.marginBottom='5px';
+            node.innerHTML = `
+                <input type="checkbox" style="margin-right:5px" id="chk_${item.id}">
+                <div style="flex:1">${escapeHtml(item.name)}</div>
+                <input type="number" style="width:80px" placeholder="Amount" id="amt_${item.id}" value="${item.amount||''}">
+                <button style="margin-left:5px" id="del_${item.id}">Delete</button>
+            `;
+            groceryListDiv.appendChild(node);
+
+            document.getElementById(`del_${item.id}`).onclick = () => { groceryList = groceryList.filter(x=>x.id!==item.id); renderGrocery(); };
+        });
+    }
+
+    addGroceryItemBtn.onclick = () => {
+        const name = groceryNewItem.value.trim();
+        if(!name) return alert('Enter item name');
+        groceryList.push({id: uid(), name, amount: null});
+        groceryNewItem.value='';
+        renderGrocery();
+    };
+
+    assignGroceryBtn.onclick = () => {
+        if(!selectedId) return alert('Select a person first');
+        const p = people.find(x=>x.id===selectedId);
+        if(!p) return;
+
+        let assignedCount = 0;
+        groceryList.forEach(item => {
+            const chk = document.getElementById(`chk_${item.id}`);
+            const amtInput = document.getElementById(`amt_${item.id}`);
+            const amt = Number(amtInput.value);
+            if(chk && chk.checked) {
+                if(!amt || isNaN(amt)) return; // skip if amount invalid
+                addTx(selectedId, amt, 'given', item.name);
+                assignedCount++;
+            }
+        });
+        if(!assignedCount) return alert('Select items and enter valid amounts');
+        // remove assigned items
+        groceryList = groceryList.filter(item => {
+            const chk = document.getElementById(`chk_${item.id}`);
+            return !(chk && chk.checked);
+        });
+        renderGrocery();
+    };
+
+    // render initially
+    renderGrocery();
+</script>
         <div class="toprow">
             <div class="dropdown" id="personDropdown">
                 <div class="dd-toggle" id="ddToggle" tabindex="0">
