@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Personal Ledger — Compact Dashboard</title>
+    <meta name="description"
+        content="Personal ledger with searchable dropdown, transactions, balances. Saves locally." />
+    <style>
+        :root {
+            --bg: #061025;
+            --panel: #0e1728;
+            --muted: #9aa5b2;
+            --accent: #7c3aed;
+            --accent-2: #4f46e5;
+            --glass: rgba(255, 255, 255, 0.03);
+            --success: #10b981;
+            --danger: #ef4444;
+            --card-radius: 12px;
+            --shadow: 0 8px 24px rgba(7, 11, 20, 0.6);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            background: linear-gradient(180deg, var(--bg), #02101a);
+            color: #e6eef6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px
+        }
+
+        .app {
+            width: 100%;
+            max-width: 920px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: var(--shadow)
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap
+        }
+
+        .logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 18px
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .toprow {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        .dropdown {
+            position: relative;
+            min-width: 240px
+        }
+
+        .dd-toggle {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 10px 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: pointer
+        }
+
+        .dd-toggle .label {
+            flex: 1;
+            text-align: left
+        }
+
+        .dd-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #0a1530, #071129);
+            border-radius: 10px;
+            padding: 8px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+            z-index: 30;
+            max-height: 260px;
+            overflow: auto;
+            border: 1px solid rgba(255, 255, 255, 0.03)
+        }
+
+        .dd-search {
+            display: flex;
+            padding: 8px
+        }
+
+        .dd-search input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: transparent;
+            color: inherit
+        }
+
+        .dd-list {
+            margin-top: 6px
+        }
+
+        .dd-item {
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer
+        }
+
+        .dd-item:hover {
+            background: rgba(255, 255, 255, 0.02)
+        }
+
+        .dd-empty {
+            padding: 10px;
+            color: var(--muted)
+        }
+
+        .controls {
+            margin-left: auto;
+            display: flex;
+            gap: 8px
+        }
+
+        .btn {
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border: 0;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--muted);
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 14px;
+            margin-top: 16px
+        }
+
+        @media(max-width:920px) {
+            .content {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent);
+            padding: 14px;
+            border-radius: var(--card-radius)
+        }
+
+        .balance {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .balance .big {
+            font-size: 26px;
+            font-weight: 800
+        }
+
+        .tx-list {
+            margin-top: 12px;
+            max-height: 420px;
+            overflow: auto
+        }
+
+        .tx {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent)
+        }
+
+        .tx .type {
+            width: 8px;
+            height: 44px;
+            border-radius: 8px;
+            margin-top: 4px
+        }
+
+        .tx .meta {
+            flex: 1
+        }
+
+        .tx .amt {
+            font-weight: 800
+        }
+
+        .tx .note {
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .tx .time {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px
+        }
+
+        .tx .actions {
+            margin-left: 8px
+        }
+
+        /* right column */
+        .right {
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .form-row input,
+        .form-row select {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: transparent;
+            color: inherit
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 6px
+        }
+
+        .empty {
+            color: var(--muted);
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center
+        }
+
+        .share-btn {
+            background: linear-gradient(90deg, #25D366, #1DA851);
+            border: 0;
+            color: white;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer
+        }
+
+        .footer {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app" role="application">
+        <div class="header">
+            <div class="logo">PL</div>
+            <div>
+                <h1>Personal Ledger</h1>
+                <div class="small">Select a person, view balance & transactions, add new entries quickly.</div>
+            </div>
+            <div class="controls">
+                <button id="exportCSV" class="btn-ghost">Export CSV</button>
+                <button id="clearAll" class="btn-ghost">Clear All</button>
+            </div>
+        </div>
+
+        <div class="toprow">
+            <div class="dropdown" id="personDropdown">
+                <div class="dd-toggle" id="ddToggle" tabindex="0">
+                    <div class="label" id="selectedLabel">Select a person...</div>
+                    <div class="small" style="opacity:0.9">▾</div>
+                </div>
+                <div class="dd-menu" id="ddMenu" style="display:none">
+                    <div class="dd-search"><input id="ddSearch" placeholder="Search or add..." /></div>
+                    <div class="dd-list" id="ddList"></div>
+                    <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.02);display:flex;gap:8px">
+                        <input id="ddNewName" placeholder="Add new person"
+                            style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
+                        <button id="ddAdd" class="btn">Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
+                <div class="small">Grand total:</div>
+                <div class="big" id="totalAll">₹0.00</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div>
+                <div class="panel" id="personPanel">
+                    <div id="noPerson" class="empty">No person selected. Use the dropdown above to pick someone.</div>
+
+                    <div id="personUI" style="display:none">
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                            <div style="display:flex;gap:12px;align-items:center">
+                                <div id="pAvatar"
+                                    style="width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px">
+                                    A</div>
+                                <div>
+                                    <div id="pName" style="font-weight:900;font-size:18px">Name</div>
+                                    <div class="small" id="pCreated">Created: —</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <div style="text-align:right">
+                                    <div class="small">Running total</div>
+                                    <div class="big" id="pTotal">₹0.00</div>
+                                </div>
+                                <button id="sharePerson" class="share-btn">Share (WhatsApp)</button>
+                                <button id="deletePerson" class="btn-ghost">Delete</button>
+                            </div>
+                        </div>
+
+                        <div class="tx-list" id="txList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="right">
+                <div class="panel">
+                    <div class="small">Add transaction</div>
+                    <div style="height:8px"></div>
+                    <div class="form-row">
+                        <div style="flex:1">
+                            <label>Amount</label>
+                            <input id="txAmount" placeholder="e.g. 500" type="number" />
+                        </div>
+                        <div style="width:160px">
+                            <label>Type</label>
+                            <select id="txType">
+                                <option value="given">You gave (outgoing)</option>
+                                <option value="received">You received (incoming)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="height:8px"></div>
+                    <div class="form-row">
+                        <div style="flex:1">
+                            <label>Note</label>
+                            <input id="txNote" placeholder="Note (optional)" />
+                        </div>
+                    </div>
+                    <div style="height:8px"></div>
+                    <div class="form-row">
+                        <div style="flex:1;min-width:160px">
+                            <label class="small">Date & Time</label>
+                            <input id="txDatetime" type="text" disabled />
+                        </div>
+
+                        <div style="display:flex;align-items:flex-end">
+                            <button id="addTx" class="btn" style="height:44px">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="small">Quick people</div>
+                    <div style="height:8px"></div>
+                    <div id="quickList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                </div>
+
+            </aside>
+        </div>
+
+        <div class="footer">All data saved locally in this browser • Works offline</div>
+    </div>
+
+    <script>
+    // Storage
+    const PEOPLE_KEY = 'pl_people_v2';
+    let people = []; 
+    let selectedId = null;
+
+    // Elements
+    const ddToggle = document.getElementById('ddToggle'),
+          ddMenu = document.getElementById('ddMenu'),
+          ddSearch = document.getElementById('ddSearch'),
+          ddList = document.getElementById('ddList'),
+          ddNewName = document.getElementById('ddNewName'),
+          ddAdd = document.getElementById('ddAdd'),
+          selectedLabel = document.getElementById('selectedLabel'),
+          totalAllEl = document.getElementById('totalAll'),
+          noPerson = document.getElementById('noPerson'),
+          personUI = document.getElementById('personUI'),
+          pAvatar = document.getElementById('pAvatar'),
+          pName = document.getElementById('pName'),
+          pCreated = document.getElementById('pCreated'),
+          pTotal = document.getElementById('pTotal'),
+          txList = document.getElementById('txList'),
+          addTxBtn = document.getElementById('addTx'),
+          txAmount = document.getElementById('txAmount'),
+          txType = document.getElementById('txType'),
+          txNote = document.getElementById('txNote'),
+          txDatetime = document.getElementById('txDatetime'),
+          exportCSV = document.getElementById('exportCSV'),
+          clearAll = document.getElementById('clearAll'),
+          sharePerson = document.getElementById('sharePerson'),
+          deletePerson = document.getElementById('deletePerson'),
+          quickList = document.getElementById('quickList');
+
+    // Utils
+    const uid = () => 'id_' + Math.random().toString(36).slice(2, 9);
+    const nowISO = () => new Date().toISOString();
+    const formatMoney = n => '₹' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatShort = ts => new Date(ts).toLocaleString();
+
+    function load() {
+        try { people = JSON.parse(localStorage.getItem(PEOPLE_KEY) || '[]'); } 
+        catch { people = []; }
+        renderDropdown();
+        renderQuick();
+        updateTotals();
+    }
+
+    function save() { localStorage.setItem(PEOPLE_KEY, JSON.stringify(people)); }
+
+    function createPerson(name) {
+        if (!name || !name.trim()) return alert('Enter a name');
+        const p = { id: uid(), name: name.trim(), created: nowISO(), transactions: [], balance: 0 };
+        people.push(p);
+        save();
+        renderDropdown();
+        renderQuick();
+        selectPerson(p.id);
+    }
+
+    function deletePersonById(id) {
+        if (!confirm('Delete this person and all their transactions?')) return;
+        people = people.filter(p => p.id !== id);
+        save();
+        renderDropdown();
+        renderQuick();
+        selectedId = null;
+        showPerson(null);
+    }
+
+    function addTx(personId, amount, type, note) {
+        const p = people.find(x => x.id === personId);
+        if (!p) return;
+        const a = Number(amount);
+        if (!a || isNaN(a)) return alert('Enter a valid amount');
+
+        const tx = {
+            id: uid(),
+            amount: Math.abs(a),
+            type,
+            note: note || '',
+            ts: nowISO() // auto timestamp
+        };
+
+        p.transactions.push(tx);
+        p.balance = p.transactions.reduce((s, t) => s + (t.type === 'received' ? t.amount : -t.amount), 0);
+        save();
+        renderDropdown();
+        renderQuick();
+        selectPerson(personId);
+    }
+
+    function removeTx(personId, txId) {
+        const p = people.find(x => x.id === personId);
+        if (!p) return;
+        p.transactions = p.transactions.filter(t => t.id !== txId);
+        p.balance = p.transactions.reduce((s, t) => s + (t.type === 'received' ? t.amount : -t.amount), 0);
+        save();
+        renderDropdown();
+        renderQuick();
+        selectPerson(personId);
+    }
+
+    function renderDropdown(filter = '') {
+        ddList.innerHTML = '';
+        const q = String(filter || '').toLowerCase();
+        const arr = people.slice().sort((a, b) => {
+            const la = a.transactions.length ? new Date(a.transactions[a.transactions.length - 1].ts).getTime() : new Date(a.created).getTime();
+            const lb = b.transactions.length ? new Date(b.transactions[b.transactions.length - 1].ts).getTime() : new Date(b.created).getTime();
+            return lb - la;
+        });
+
+        if (!arr.length) { 
+            ddList.innerHTML = '<div class="dd-empty">No people yet — add one below</div>'; 
+            return; 
+        }
+
+        arr.forEach(p => {
+            if (q && !p.name.toLowerCase().includes(q)) return;
+            const d = document.createElement('div');
+            d.className = 'dd-item';
+            d.innerHTML = `<div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-weight:700;margin-right:8px">${initials(p.name)}</div>
+                           <div style="flex:1">
+                             <div style="font-weight:700">${escapeHtml(p.name)}</div>
+                             <div class="small">${p.transactions.length} tx • ${formatMoney(p.balance)}</div>
+                           </div>`;
+            d.onclick = () => { selectPerson(p.id); closeDropdown(); };
+            ddList.appendChild(d);
+        });
+    }
+
+    function renderQuick() {
+        quickList.innerHTML = '';
+        people.slice(0, 8).forEach(p => {
+            const b = document.createElement('button');
+            b.className = 'btn-ghost';
+            b.style.padding = '8px 10px';
+            b.textContent = p.name + ' • ' + formatMoney(p.balance);
+            b.onclick = () => selectPerson(p.id);
+            quickList.appendChild(b);
+        });
+    }
+
+    function updateTotals() {
+        const total = people.reduce((s, p) => s + (p.balance || 0), 0);
+        totalAllEl.textContent = formatMoney(total);
+    }
+
+    function selectPerson(id) {
+        selectedId = id;
+        const p = people.find(x => x.id === id);
+        if (!p) return;
+        selectedLabel.textContent = p.name;
+        showPerson(p);
+    }
+
+    function showPerson(p) {
+        if (!p) { 
+            noPerson.style.display = 'block';
+            personUI.style.display = 'none';
+            selectedLabel.textContent = 'Select a person...';
+            return; 
+        }
+        noPerson.style.display = 'none';
+        personUI.style.display = 'block';
+        pAvatar.textContent = initials(p.name);
+        pName.textContent = p.name;
+        pCreated.textContent = 'Created: ' + formatShort(p.created);
+        pTotal.textContent = formatMoney(p.balance);
+        txDatetime.value = formatShort(nowISO()); // show current date/time by default
+        renderTxList(p);
+        updateTotals();
+    }
+
+    function renderTxList(p) {
+        txList.innerHTML = '';
+        const txs = p.transactions.slice().sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        if (!txs.length) {
+            txList.innerHTML = '<div class="empty">No transactions yet — add one using the form.</div>';
+            return;
+        }
+        txs.forEach(t => {
+            const node = document.createElement('div');
+            node.className = 'tx';
+            const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
+            node.innerHTML = `<div class="type" style="background:${color}"></div>
+                              <div class="meta">
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                  <div>
+                                    <div style="font-weight:800">${t.type==='received'?'IN':'OUT'}</div>
+                                    <div class="note">${escapeHtml(t.note||'')}</div>
+                                  </div>
+                                  <div class="amt" style="color:${color}">${t.type==='received'?'+':'-'}${formatMoney(t.amount).replace('₹','')}</div>
+                                </div>
+                                <div class="time">${formatShort(t.ts)}</div>
+                              </div>`;
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const del = document.createElement('button');
+            del.className = 'btn-ghost';
+            del.textContent = 'Delete';
+            del.onclick = (e) => { e.stopPropagation(); if(confirm('Delete transaction?')) removeTx(p.id, t.id); };
+            actions.appendChild(del);
+            node.appendChild(actions);
+            txList.appendChild(node);
+        });
+    }
+
+    // dropdown open/close
+    function openDropdown() { ddMenu.style.display = 'block'; ddSearch.focus(); }
+    function closeDropdown() { ddMenu.style.display = 'none'; ddSearch.value = ''; renderDropdown(); }
+    ddToggle.addEventListener('click', () => { ddMenu.style.display === 'block' ? closeDropdown() : openDropdown(); });
+    document.addEventListener('click', e => { if(!document.getElementById('personDropdown').contains(e.target)) closeDropdown(); });
+    ddSearch.addEventListener('input', e => renderDropdown(e.target.value));
+    ddAdd.addEventListener('click', () => { createPerson(ddNewName.value); ddNewName.value=''; closeDropdown(); });
+
+    // actions
+    addTxBtn.onclick = () => {
+        if (!selectedId) return alert('Select a person first');
+        const amt = txAmount.value;
+        const type = txType.value;
+        const note = txNote.value;
+        addTx(selectedId, amt, type, note); // date/time auto
+        txAmount.value = ''; txNote.value = '';
+        txDatetime.value = formatShort(nowISO()); // reset to current
+    };
+
+    deletePerson.addEventListener('click', () => { if (!selectedId) return; deletePersonById(selectedId); });
+
+    sharePerson.addEventListener('click', () => {
+        if (!selectedId) return alert('Select a person');
+        const p = people.find(x => x.id === selectedId);
+        if (!p) return;
+        let msg = `*${p.name}*\nTotal: ${formatMoney(p.balance)}\nTransactions:\n`;
+        p.transactions.slice().sort((a,b)=> new Date(a.ts)-new Date(b.ts)).forEach(t => {
+            const sign = t.type==='received' ? '+' : '-';
+            msg += `${sign}${t.amount} — ${t.note||'—'} (${new Date(t.ts).toLocaleString()})\n`;
+        });
+        const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+        window.open(url, '_blank');
+    });
+
+    exportCSV.addEventListener('click', () => {
+        let rows = ['person,tx_id,tx_ts,tx_type,amount,note'];
+        people.forEach(p => p.transactions.forEach(t => rows.push(`${escapeCsv(p.name)},${t.id},${t.ts},${t.type},${t.amount},${escapeCsv(t.note)}`)));
+        const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='personal_ledger.csv'; a.click();
+    });
+
+    clearAll.addEventListener('click', () => { 
+        if(confirm('Clear all people and transactions?')) { 
+            people=[]; save(); renderDropdown(); renderQuick(); showPerson(null); updateTotals(); 
+        } 
+    });
+
+    function escapeCsv(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; }
+    function initials(name) { return name.split(' ').map(x=>x[0]||'').join('').slice(0,2).toUpperCase(); }
+    function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;"}[c])); }
+
+    // init
+    load();
+    if(people.length) selectPerson(people[0].id);
+    window.PL = { people, load, save };
+</script>
+
+</body>
+
+</html>
