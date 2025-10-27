@@ -324,71 +324,73 @@
         </div>
 
         <!-- Grocery List Panel (Dark Themed, Polished, Undo Support, Strikethrough) -->
-<div class="panel" id="groceryUI" style="margin-top:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div class="small" style="font-weight:600">Grocery / Temporary List</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="shareGrocery" class="share-btn">Share (WhatsApp)</button>
-            <button id="undoGrocery" class="btn-ghost">Undo Delete</button>
-            <button id="selectAllGrocery" class="btn-ghost">Select All</button>
-            <button id="deselectAllGrocery" class="btn-ghost">Deselect All</button>
+        <div class="panel" id="groceryUI" style="margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                <div class="small" style="font-weight:600">Grocery / Temporary List</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button id="copyGroceryBtn" class="btn">
+                        📋 Copy List
+                    </button>
+                    <button id="undoGrocery" class="btn-ghost">Undo Delete</button>
+                    <button id="selectAllGrocery" class="btn-ghost">Select All</button>
+                    <button id="deselectAllGrocery" class="btn-ghost">Deselect All</button>
+                </div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="form-row">
+                <input type="text" id="groceryNewItem" placeholder="Enter item name">
+                <button id="addGroceryItem" class="btn">Add</button>
+            </div>
+            <div style="height:8px"></div>
+            <div id="groceryList" class="tx-list"></div>
+            <div class="small" id="groceryTotal" style="font-weight:600;margin-top:6px;">Total Amount: ₹0</div>
+            <button id="assignGrocery" class="btn" style="margin-top:10px;width:100%">Assign Selected Items</button>
         </div>
-    </div>
-    <div style="height:8px"></div>
-    <div class="form-row">
-        <input type="text" id="groceryNewItem" placeholder="Enter item name">
-        <button id="addGroceryItem" class="btn">Add</button>
-    </div>
-    <div style="height:8px"></div>
-    <div id="groceryList" class="tx-list"></div>
-    <div class="small" id="groceryTotal" style="font-weight:600;margin-top:6px;">Total Amount: ₹0</div>
-    <button id="assignGrocery" class="btn" style="margin-top:10px;width:100%">Assign Selected Items</button>
-</div>
 
-<script>
-let groceryList = JSON.parse(localStorage.getItem('pl_grocery') || '[]');
-let lastDeletedItem = null;
+        <script>
+            let groceryList = JSON.parse(localStorage.getItem('pl_grocery') || '[]');
+            let lastDeletedItem = null;
 
-const groceryNewItem = document.getElementById('groceryNewItem');
-const addGroceryItemBtn = document.getElementById('addGroceryItem');
-const groceryListDiv = document.getElementById('groceryList');
-const assignGroceryBtn = document.getElementById('assignGrocery');
-const shareGroceryBtn = document.getElementById('shareGrocery');
-const undoGroceryBtn = document.getElementById('undoGrocery');
-const selectAllGroceryBtn = document.getElementById('selectAllGrocery');
-const deselectAllGroceryBtn = document.getElementById('deselectAllGrocery');
-const groceryTotalEl = document.getElementById('groceryTotal');
+            const groceryNewItem = document.getElementById('groceryNewItem');
+            const addGroceryItemBtn = document.getElementById('addGroceryItem');
+            const groceryListDiv = document.getElementById('groceryList');
+            const assignGroceryBtn = document.getElementById('assignGrocery');
+            const copyGroceryBtn = document.getElementById('copyGroceryBtn');
+            const undoGroceryBtn = document.getElementById('undoGrocery');
+            const selectAllGroceryBtn = document.getElementById('selectAllGrocery');
+            const deselectAllGroceryBtn = document.getElementById('deselectAllGrocery');
+            const groceryTotalEl = document.getElementById('groceryTotal');
 
-// Save to localStorage
-function saveGrocery() { localStorage.setItem('pl_grocery', JSON.stringify(groceryList)); }
+            // Save to localStorage
+            function saveGrocery() { localStorage.setItem('pl_grocery', JSON.stringify(groceryList)); }
 
-// Update total amount
-function updateTotalAmount() {
-    const total = groceryList.reduce((s, x) => s + (x.amount || 0), 0);
-    groceryTotalEl.textContent = 'Total Amount: ₹' + total;
-}
+            // Update total amount
+            function updateTotalAmount() {
+                const total = groceryList.reduce((s, x) => s + (x.amount || 0), 0);
+                groceryTotalEl.textContent = 'Total Amount: ₹' + total;
+            }
 
-// Render grocery list
-function renderGrocery() {
-    groceryListDiv.innerHTML = '';
-    if (!groceryList.length) {
-        groceryListDiv.innerHTML = '<div class="empty">No items in grocery list.</div>';
-        updateTotalAmount();
-        return;
-    }
+            // Render grocery list
+            function renderGrocery() {
+                groceryListDiv.innerHTML = '';
+                if (!groceryList.length) {
+                    groceryListDiv.innerHTML = '<div class="empty">No items in grocery list.</div>';
+                    updateTotalAmount();
+                    return;
+                }
 
-    groceryList.forEach((item, i) => {
-        const node = document.createElement('div');
-        node.className = 'tx';
-        node.style.display = 'flex';
-        node.style.alignItems = 'center';
-        node.style.gap = '8px';
-        node.style.padding = '8px';
-        node.style.borderRadius = '12px';
-        node.style.background = 'rgba(255,255,255,0.02)';
-        node.style.marginBottom = '6px';
+                groceryList.forEach((item, i) => {
+                    const node = document.createElement('div');
+                    node.className = 'tx';
+                    node.style.display = 'flex';
+                    node.style.alignItems = 'center';
+                    node.style.gap = '8px';
+                    node.style.padding = '8px';
+                    node.style.borderRadius = '12px';
+                    node.style.background = 'rgba(255,255,255,0.02)';
+                    node.style.marginBottom = '6px';
 
-        node.innerHTML = `
+                    node.innerHTML = `
             <input type="checkbox" id="chk_${item.id}">
             <div class="grocery-name" style="flex:1;font-weight:500;cursor:pointer;color:${item.done ? '#888' : '#fff'};text-decoration:${item.done ? 'line-through' : 'none'}">
                 ${escapeHtml(item.name)}
@@ -398,127 +400,126 @@ function renderGrocery() {
             <button class="btn-ghost" id="del_${item.id}">Delete</button>
         `;
 
-        groceryListDiv.appendChild(node);
+                    groceryListDiv.appendChild(node);
 
-        // Toggle strikethrough
-        const nameDiv = node.querySelector('.grocery-name');
-        nameDiv.addEventListener('click', () => {
-            item.done = !item.done;
-            nameDiv.style.textDecoration = item.done ? 'line-through' : 'none';
-            nameDiv.style.color = item.done ? '#888' : '#fff';
-            saveGrocery();
-        });
+                    // Toggle strikethrough
+                    const nameDiv = node.querySelector('.grocery-name');
+                    nameDiv.addEventListener('click', () => {
+                        item.done = !item.done;
+                        nameDiv.style.textDecoration = item.done ? 'line-through' : 'none';
+                        nameDiv.style.color = item.done ? '#888' : '#fff';
+                        saveGrocery();
+                    });
 
-        // Amount input handling
-        const amtInput = document.getElementById(`amt_${item.id}`);
-        amtInput.addEventListener('input', () => {
-            const val = Number(amtInput.value);
-            if (!isNaN(val)) item.amount = val;
-            saveGrocery();
-            updateTotalAmount();
-        });
-        amtInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveGrocery();
-                const next = groceryList[i + 1];
-                if (next) document.getElementById(`amt_${next.id}`).focus();
-                else groceryNewItem.focus();
+                    // Amount input handling
+                    const amtInput = document.getElementById(`amt_${item.id}`);
+                    amtInput.addEventListener('input', () => {
+                        const val = Number(amtInput.value);
+                        if (!isNaN(val)) item.amount = val;
+                        saveGrocery();
+                        updateTotalAmount();
+                    });
+                    amtInput.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveGrocery();
+                            const next = groceryList[i + 1];
+                            if (next) document.getElementById(`amt_${next.id}`).focus();
+                            else groceryNewItem.focus();
+                        }
+                    });
+
+                    // Delete item
+                    document.getElementById(`del_${item.id}`).onclick = () => {
+                        lastDeletedItem = { ...item };
+                        groceryList = groceryList.filter(x => x.id !== item.id);
+                        saveGrocery();
+                        renderGrocery();
+                    };
+                });
+
+                updateTotalAmount();
             }
-        });
 
-        // Delete item
-        document.getElementById(`del_${item.id}`).onclick = () => {
-            lastDeletedItem = { ...item };
-            groceryList = groceryList.filter(x => x.id !== item.id);
-            saveGrocery();
+            // Add new item
+            function addGroceryItem() {
+                const name = groceryNewItem.value.trim();
+                if (!name) return alert('Enter item name');
+                groceryList.push({ id: uid(), name, amount: null, done: false });
+                saveGrocery();
+                groceryNewItem.value = '';
+                renderGrocery();
+            }
+
+            addGroceryItemBtn.onclick = addGroceryItem;
+            groceryNewItem.addEventListener('keydown', e => { if (e.key === 'Enter') addGroceryItem(); });
+
+            // Assign selected items (always 'Gave')
+            assignGroceryBtn.onclick = () => {
+                if (!selectedId) return alert('Select a person first');
+                const p = people.find(x => x.id === selectedId);
+                if (!p) return;
+
+                let assignedCount = 0;
+                groceryList.forEach(item => {
+                    const chk = document.getElementById(`chk_${item.id}`);
+                    if (chk && chk.checked) {
+                        if (!item.amount || isNaN(item.amount)) return;
+                        addTx(selectedId, item.amount, 'given', item.name);
+                        assignedCount++;
+                    }
+                });
+
+                if (!assignedCount) return alert('Select items with valid amounts');
+
+                groceryList = groceryList.filter(item => !document.getElementById(`chk_${item.id}`).checked);
+                saveGrocery();
+                renderGrocery();
+            };
+
+            // Share via WhatsApp (always 'Gave')
+            copyGroceryBtn.onclick = async () => {
+                if (!groceryList.length) {
+                    alert("No items to copy!");
+                    return;
+                }
+
+                // Build the formatted grocery list text
+                let msg = "🛒 *Grocery List*\n\n";
+                groceryList.forEach(item => {
+                    msg += `• ${item.name}${item.amount ? ' — ₹' + item.amount : ''} \n`;
+                });
+
+                try {
+                    await navigator.clipboard.writeText(msg);
+                    alert("✅ Grocery list copied to clipboard!");
+                } catch (err) {
+                    console.error("Clipboard error:", err);
+                    alert("❌ Failed to copy. Try again or check browser permissions.");
+                }
+            };
+
+
+
+            // Undo last deletion
+            undoGroceryBtn.onclick = () => {
+                if (!lastDeletedItem) return alert('Nothing to undo');
+                groceryList.push(lastDeletedItem);
+                lastDeletedItem = null;
+                saveGrocery();
+                renderGrocery();
+            };
+
+            // Select/Deselect all
+            selectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = true);
+            deselectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = false);
+
+            // Initial render
             renderGrocery();
-        };
-    });
 
-    updateTotalAmount();
-}
-
-// Add new item
-function addGroceryItem() {
-    const name = groceryNewItem.value.trim();
-    if (!name) return alert('Enter item name');
-    groceryList.push({ id: uid(), name, amount: null, done: false });
-    saveGrocery();
-    groceryNewItem.value = '';
-    renderGrocery();
-}
-
-addGroceryItemBtn.onclick = addGroceryItem;
-groceryNewItem.addEventListener('keydown', e => { if (e.key === 'Enter') addGroceryItem(); });
-
-// Assign selected items (always 'Gave')
-assignGroceryBtn.onclick = () => {
-    if (!selectedId) return alert('Select a person first');
-    const p = people.find(x => x.id === selectedId);
-    if (!p) return;
-
-    let assignedCount = 0;
-    groceryList.forEach(item => {
-        const chk = document.getElementById(`chk_${item.id}`);
-        if (chk && chk.checked) {
-            if (!item.amount || isNaN(item.amount)) return;
-            addTx(selectedId, item.amount, 'given', item.name);
-            assignedCount++;
-        }
-    });
-
-    if (!assignedCount) return alert('Select items with valid amounts');
-
-    groceryList = groceryList.filter(item => !document.getElementById(`chk_${item.id}`).checked);
-    saveGrocery();
-    renderGrocery();
-};
-
-// Share via WhatsApp (always 'Gave')
-shareGroceryBtn.onclick = () => {
-    if (!groceryList.length) return alert('No items to share');
-
-    let msg = '*Grocery List:*\n';
-    groceryList.forEach(item => {
-        msg += `- ${item.name} ${item.amount ? '₹' + item.amount : ''} (Gave)\n`;
-    });
-
-    const encoded = encodeURIComponent(msg);
-
-    // WhatsApp deep link for all platforms
-    const whatsappURL = `whatsapp://send?text=${encoded}`;
-    const webFallback = `https://wa.me/?text=${encoded}`;
-
-    // Try to open the native app first
-    window.location.href = whatsappURL;
-
-    // If it fails (e.g. on desktop), fallback to WhatsApp Web after 1 second
-    setTimeout(() => {
-        window.open(webFallback, '_blank');
-    }, 1000);
-};
-
-
-// Undo last deletion
-undoGroceryBtn.onclick = () => {
-    if (!lastDeletedItem) return alert('Nothing to undo');
-    groceryList.push(lastDeletedItem);
-    lastDeletedItem = null;
-    saveGrocery();
-    renderGrocery();
-};
-
-// Select/Deselect all
-selectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = true);
-deselectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = false);
-
-// Initial render
-renderGrocery();
-
-// Escape HTML
-function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[c])); }
-</script>
+            // Escape HTML
+            function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[c])); }
+        </script>
 
 
 
@@ -568,7 +569,7 @@ function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':
                                     <div class="small">Running total</div>
                                     <div class="big" id="pTotal">₹0.00</div>
                                 </div>
-                                <button id="sharePerson" class="share-btn">Share (WhatsApp)</button>
+                                <button id="sharePerson" class="btn">📋 Copy Account</button>
                                 <button id="deletePerson" class="btn-ghost">Delete</button>
                             </div>
                         </div>
@@ -863,18 +864,33 @@ function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':
 
         deletePerson.addEventListener('click', () => { if (!selectedId) return; deletePersonById(selectedId); });
 
-        sharePerson.addEventListener('click', () => {
-            if (!selectedId) return alert('Select a person');
-            const p = people.find(x => x.id === selectedId);
-            if (!p) return;
-            let msg = `*${p.name}*\nTotal: ${formatMoney(p.balance)}\nTransactions:\n`;
-            p.transactions.slice().sort((a, b) => new Date(a.ts) - new Date(b.ts)).forEach(t => {
-                const sign = t.type === 'received' ? '+' : '-';
-                msg += `${sign}${t.amount} — ${t.note || '—'} (${new Date(t.ts).toLocaleString()})\n`;
-            });
-            const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
-            window.open(url, '_blank');
+        sharePerson.onclick = async () => {
+    const p = people.find(x => x.id === selectedId);
+    if (!p) return alert("Select a person first!");
+
+    // Build formatted ledger text
+    let msg = `📒 ${p.name}'s Account\n`;
+    msg += `Balance: ${formatMoney(p.balance)}\n\n`;
+
+    if (!p.transactions.length) {
+        msg += "No transactions yet.\n";
+    } else {
+        p.transactions.forEach(tx => {
+            const typeEmoji = tx.type === "given" ? "🔴" : "🟢";
+            msg += `${typeEmoji} ${tx.type === "given" ? "You gave" : "You received"} ₹${tx.amount}`;
+            if (tx.note) msg += ` — ${tx.note}`;
+            msg += `\n${new Date(tx.ts).toLocaleString()}\n\n`;
         });
+    }
+
+    try {
+        await navigator.clipboard.writeText(msg);
+        alert("✅ Account copied to clipboard!");
+    } catch (err) {
+        console.error(err);
+        alert("❌ Failed to copy. Check browser permissions.");
+    }
+};
 
         exportCSV.addEventListener('click', () => {
             let rows = ['person,tx_id,tx_ts,tx_type,amount,note'];
