@@ -478,13 +478,27 @@ assignGroceryBtn.onclick = () => {
 // Share via WhatsApp (always 'Gave')
 shareGroceryBtn.onclick = () => {
     if (!groceryList.length) return alert('No items to share');
+
     let msg = '*Grocery List:*\n';
     groceryList.forEach(item => {
         msg += `- ${item.name} ${item.amount ? '₹' + item.amount : ''} (Gave)\n`;
     });
-    const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
-    window.open(url, '_blank');
+
+    const encoded = encodeURIComponent(msg);
+
+    // WhatsApp deep link for all platforms
+    const whatsappURL = `whatsapp://send?text=${encoded}`;
+    const webFallback = `https://wa.me/?text=${encoded}`;
+
+    // Try to open the native app first
+    window.location.href = whatsappURL;
+
+    // If it fails (e.g. on desktop), fallback to WhatsApp Web after 1 second
+    setTimeout(() => {
+        window.open(webFallback, '_blank');
+    }, 1000);
 };
+
 
 // Undo last deletion
 undoGroceryBtn.onclick = () => {
