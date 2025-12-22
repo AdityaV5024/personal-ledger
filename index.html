@@ -570,9 +570,23 @@
                                     <div class="big" id="pTotal">₹0.00</div>
                                 </div>
                                 <button id="sharePerson" class="btn">📋 Copy Account</button>
+                                <button id="settleUp" class="btn-ghost">Settle Up</button>
                                 <button id="deletePerson" class="btn-ghost">Delete</button>
                             </div>
                         </div>
+
+                        <!-- Date Filter -->
+                        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                            <select id="txDateFilter" style="padding:8px;border-radius:10px;
+                   border:1px solid rgba(255,255,255,0.04);
+                   background:transparent;color:inherit;">
+                                <option value="all">All</option>
+                                <option value="today">Today</option>
+                                <option value="month">This Month</option>
+                                <option value="lastMonth">Last Month</option>
+                            </select>
+                        </div>
+
 
                         <!-- Transaction Search -->
                         <div style="margin-top:12px;margin-bottom:8px;">
@@ -819,50 +833,61 @@
         function renderTxList(p, query = '') {
             txList.innerHTML = '';
             const q = query.toLowerCase();
+            const mode = txDateFilter?.value || 'all';
 
-            const txs = p.transactions
+            let running = 0;
+
+            // Oldest → newest for balance calc
+            const ordered = p.transactions
                 .slice()
-                .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+                .sort((a, b) => new Date(a.ts) - new Date(b.ts))
+                .filter(t => filterByDate(t, mode))
                 .filter(t => {
                     if (!q) return true;
                     return (
                         (t.note || '').toLowerCase().includes(q) ||
                         String(t.amount).includes(q) ||
-                        (t.type === 'received' ? 'in received you received' : 'out given you gave').includes(q)
+                        (t.type === 'received' ? 'in received' : 'out given').includes(q)
                     );
                 });
 
-            if (!txs.length) {
+            if (!ordered.length) {
                 txList.innerHTML = '<div class="empty">No matching transactions.</div>';
                 return;
             }
 
-            txs.forEach(t => {
+            ordered.forEach(t => {
+                running += t.type === 'received' ? t.amount : -t.amount;
+
                 const node = document.createElement('div');
                 node.className = 'tx';
                 const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
+
                 node.innerHTML = `
             <div class="type" style="background:${color}"></div>
             <div class="meta">
-                <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;justify-content:space-between">
                     <div>
                         <div style="font-weight:800">${t.type === 'received' ? 'IN' : 'OUT'}</div>
                         <div class="note">${escapeHtml(t.note || '')}</div>
                     </div>
-                    <div class="amt" style="color:${color}">
-                        ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
+                    <div>
+                        <div class="amt" style="color:${color}">
+                            ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
+                        </div>
+                        <div class="small">Bal: ${formatMoney(running)}</div>
                     </div>
                 </div>
                 <div class="time">${formatShort(t.ts)}</div>
             </div>
         `;
+
                 const actions = document.createElement('div');
                 actions.className = 'actions';
                 const del = document.createElement('button');
                 del.className = 'btn-ghost';
                 del.textContent = 'Delete';
-                del.onclick = (e) => {
-                    e.stopPropagation();
+                del.onclick = () => {
                     if (confirm('Delete transaction?')) removeTx(p.id, t.id);
                 };
                 actions.appendChild(del);
@@ -870,6 +895,7 @@
                 txList.appendChild(node);
             });
         }
+
 
         const txSearch = document.getElementById('txSearch');
 
@@ -879,6 +905,55 @@
             if (!p) return;
             renderTxList(p, txSearch.value);
         });
+
+
+        const txDateFilter = document.getElementById('txDateFilter');
+
+        function filterByDate(tx, mode) {
+            const d = new Date(tx.ts);
+            const now = new Date();
+
+            if (mode === 'today') {
+                return d.toDateString() === now.toDateString();
+            }
+
+            if (mode === 'month') {
+                return d.getMonth() === now.getMonth() &&
+                    d.getFullYear() === now.getFullYear();
+            }
+
+            if (mode === 'lastMonth') {
+                const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return d.getMonth() === lm.getMonth() &&
+                    d.getFullYear() === lm.getFullYear();
+            }
+
+            return true;
+        }
+
+
+        txDateFilter.addEventListener('change', () => {
+            if (!selectedId) return;
+            const p = people.find(x => x.id === selectedId);
+            if (!p) return;
+            renderTxList(p, txSearch.value);
+        });
+
+
+        const settleUpBtn = document.getElementById('settleUp');
+
+        settleUpBtn.onclick = () => {
+            if (!selectedId) return;
+            const p = people.find(x => x.id === selectedId);
+            if (!p || p.balance === 0) return alert('Already settled');
+
+            const amt = Math.abs(p.balance);
+            const type = p.balance < 0 ? 'received' : 'given';
+
+            if (!confirm(`Settle ₹${amt}?`)) return;
+
+            addTx(p.id, amt, type, 'Settlement');
+        };
 
 
 
