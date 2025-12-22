@@ -574,6 +574,14 @@
                             </div>
                         </div>
 
+                        <!-- Transaction Search -->
+                        <div style="margin-top:12px;margin-bottom:8px;">
+                            <input id="txSearch" placeholder="Search transactions (note, amount, IN / OUT)..." style="width:100%;padding:10px;border-radius:10px;
+                  border:1px solid rgba(255,255,255,0.04);
+                  background:transparent;color:inherit;">
+                        </div>
+
+
                         <div class="tx-list" id="txList"></div>
                     </div>
                 </div>
@@ -803,43 +811,76 @@
             pCreated.textContent = 'Created: ' + formatShort(p.created);
             pTotal.textContent = formatMoney(p.balance);
             txDatetime.value = formatShort(nowISO()); // show current date/time by default
+            if (txSearch) txSearch.value = '';
             renderTxList(p);
             updateTotals();
         }
 
-        function renderTxList(p) {
+        function renderTxList(p, query = '') {
             txList.innerHTML = '';
-            const txs = p.transactions.slice().sort((a, b) => new Date(b.ts) - new Date(a.ts));
+            const q = query.toLowerCase();
+
+            const txs = p.transactions
+                .slice()
+                .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+                .filter(t => {
+                    if (!q) return true;
+                    return (
+                        (t.note || '').toLowerCase().includes(q) ||
+                        String(t.amount).includes(q) ||
+                        (t.type === 'received' ? 'in received you received' : 'out given you gave').includes(q)
+                    );
+                });
+
             if (!txs.length) {
-                txList.innerHTML = '<div class="empty">No transactions yet — add one using the form.</div>';
+                txList.innerHTML = '<div class="empty">No matching transactions.</div>';
                 return;
             }
+
             txs.forEach(t => {
                 const node = document.createElement('div');
                 node.className = 'tx';
                 const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
-                node.innerHTML = `<div class="type" style="background:${color}"></div>
-                              <div class="meta">
-                                <div style="display:flex;justify-content:space-between;align-items:center">
-                                  <div>
-                                    <div style="font-weight:800">${t.type === 'received' ? 'IN' : 'OUT'}</div>
-                                    <div class="note">${escapeHtml(t.note || '')}</div>
-                                  </div>
-                                  <div class="amt" style="color:${color}">${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}</div>
-                                </div>
-                                <div class="time">${formatShort(t.ts)}</div>
-                              </div>`;
+                node.innerHTML = `
+            <div class="type" style="background:${color}"></div>
+            <div class="meta">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:800">${t.type === 'received' ? 'IN' : 'OUT'}</div>
+                        <div class="note">${escapeHtml(t.note || '')}</div>
+                    </div>
+                    <div class="amt" style="color:${color}">
+                        ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
+                    </div>
+                </div>
+                <div class="time">${formatShort(t.ts)}</div>
+            </div>
+        `;
                 const actions = document.createElement('div');
                 actions.className = 'actions';
                 const del = document.createElement('button');
                 del.className = 'btn-ghost';
                 del.textContent = 'Delete';
-                del.onclick = (e) => { e.stopPropagation(); if (confirm('Delete transaction?')) removeTx(p.id, t.id); };
+                del.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm('Delete transaction?')) removeTx(p.id, t.id);
+                };
                 actions.appendChild(del);
                 node.appendChild(actions);
                 txList.appendChild(node);
             });
         }
+
+        const txSearch = document.getElementById('txSearch');
+
+        txSearch.addEventListener('input', () => {
+            if (!selectedId) return;
+            const p = people.find(x => x.id === selectedId);
+            if (!p) return;
+            renderTxList(p, txSearch.value);
+        });
+
+
 
         // dropdown open/close
         function openDropdown() { ddMenu.style.display = 'block'; ddSearch.focus(); }
@@ -865,32 +906,32 @@
         deletePerson.addEventListener('click', () => { if (!selectedId) return; deletePersonById(selectedId); });
 
         sharePerson.onclick = async () => {
-    const p = people.find(x => x.id === selectedId);
-    if (!p) return alert("Select a person first!");
+            const p = people.find(x => x.id === selectedId);
+            if (!p) return alert("Select a person first!");
 
-    // Build formatted ledger text
-    let msg = `📒 ${p.name}'s Account\n`;
-    msg += `Balance: ${formatMoney(p.balance)}\n\n`;
+            // Build formatted ledger text
+            let msg = `📒 ${p.name}'s Account\n`;
+            msg += `Balance: ${formatMoney(p.balance)}\n\n`;
 
-    if (!p.transactions.length) {
-        msg += "No transactions yet.\n";
-    } else {
-        p.transactions.forEach(tx => {
-            const typeEmoji = tx.type === "given" ? "🔴" : "🟢";
-            msg += `${typeEmoji} ${tx.type === "given" ? "You gave" : "You received"} ₹${tx.amount}`;
-            if (tx.note) msg += ` — ${tx.note}`;
-            msg += `\n${new Date(tx.ts).toLocaleString()}\n\n`;
-        });
-    }
+            if (!p.transactions.length) {
+                msg += "No transactions yet.\n";
+            } else {
+                p.transactions.forEach(tx => {
+                    const typeEmoji = tx.type === "given" ? "🔴" : "🟢";
+                    msg += `${typeEmoji} ${tx.type === "given" ? "You gave" : "You received"} ₹${tx.amount}`;
+                    if (tx.note) msg += ` — ${tx.note}`;
+                    msg += `\n${new Date(tx.ts).toLocaleString()}\n\n`;
+                });
+            }
 
-    try {
-        await navigator.clipboard.writeText(msg);
-        alert("✅ Account copied to clipboard!");
-    } catch (err) {
-        console.error(err);
-        alert("❌ Failed to copy. Check browser permissions.");
-    }
-};
+            try {
+                await navigator.clipboard.writeText(msg);
+                alert("✅ Account copied to clipboard!");
+            } catch (err) {
+                console.error(err);
+                alert("❌ Failed to copy. Check browser permissions.");
+            }
+        };
 
         exportCSV.addEventListener('click', () => {
             let rows = ['person,tx_id,tx_ts,tx_type,amount,note'];
