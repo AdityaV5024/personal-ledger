@@ -835,30 +835,36 @@
             const q = query.toLowerCase();
             const mode = txDateFilter?.value || 'all';
 
-            let running = 0;
-
-            // Oldest → newest for balance calc
-            const ordered = p.transactions
+            // 1️⃣ Full chronological list (NO FILTERS)
+            const full = p.transactions
                 .slice()
-                .sort((a, b) => new Date(a.ts) - new Date(b.ts))
-                .filter(t => filterByDate(t, mode))
-                .filter(t => {
-                    if (!q) return true;
-                    return (
-                        (t.note || '').toLowerCase().includes(q) ||
-                        String(t.amount).includes(q) ||
-                        (t.type === 'received' ? 'in received' : 'out given').includes(q)
-                    );
-                });
+                .sort((a, b) => new Date(a.ts) - new Date(b.ts));
 
-            if (!ordered.length) {
+            // 2️⃣ Compute running balance on FULL data
+            let running = 0;
+            full.forEach(t => {
+                running += t.type === 'received' ? t.amount : -t.amount;
+                t._running = running;
+            });
+
+            // 3️⃣ Apply filters ONLY for display
+            const visible = full.filter(t => {
+                if (!filterByDate(t, mode)) return false;
+                if (!q) return true;
+                return (
+                    (t.note || '').toLowerCase().includes(q) ||
+                    String(t.amount).includes(q) ||
+                    (t.type === 'received' ? 'in received' : 'out given').includes(q)
+                );
+            });
+
+            if (!visible.length) {
                 txList.innerHTML = '<div class="empty">No matching transactions.</div>';
                 return;
             }
 
-            ordered.forEach(t => {
-                running += t.type === 'received' ? t.amount : -t.amount;
-
+            // 4️⃣ Show latest → oldest
+            visible.slice().reverse().forEach(t => {
                 const node = document.createElement('div');
                 node.className = 'tx';
                 const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
@@ -875,7 +881,7 @@
                         <div class="amt" style="color:${color}">
                             ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
                         </div>
-                        <div class="small">Bal: ${formatMoney(running)}</div>
+                        <div class="small">Bal: ${formatMoney(t._running)}</div>
                     </div>
                 </div>
                 <div class="time">${formatShort(t.ts)}</div>
