@@ -830,6 +830,19 @@
             updateTotals();
         }
 
+        function monthKey(ts) {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${d.getMonth()}`;
+        }
+
+        function monthLabel(ts) {
+            return new Date(ts).toLocaleString(undefined, {
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+
         function renderTxList(p, query = '') {
             txList.innerHTML = '';
             const q = query.toLowerCase();
@@ -864,42 +877,70 @@
             }
 
             // 4️⃣ Show latest → oldest
+            let lastMonth = null;
+
             visible.slice().reverse().forEach(t => {
+                const currentMonth = monthKey(t.ts);
+
+                // 🔹 Month separator
+                if (currentMonth !== lastMonth) {
+                    const sep = document.createElement('div');
+                    sep.style.margin = '14px 0 8px';
+                    sep.style.padding = '8px 12px';
+                    sep.style.borderRadius = '10px';
+                    sep.style.background = 'rgba(255,255,255,0.03)';
+                    sep.style.fontWeight = '700';
+
+                    const opening = t._running - (t.type === 'received' ? t.amount : -t.amount);
+
+                    sep.innerHTML = `
+            ${monthLabel(t.ts)}
+            <div class="small">Opening balance: ${formatMoney(opening)}</div>
+        `;
+
+                    txList.appendChild(sep);
+                    lastMonth = currentMonth;
+                }
+
+                // 🔹 Transaction row
                 const node = document.createElement('div');
                 node.className = 'tx';
                 const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
 
                 node.innerHTML = `
-            <div class="type" style="background:${color}"></div>
-            <div class="meta">
-                <div style="display:flex;justify-content:space-between">
-                    <div>
-                        <div style="font-weight:800">${t.type === 'received' ? 'IN' : 'OUT'}</div>
-                        <div class="note">${escapeHtml(t.note || '')}</div>
-                    </div>
-                    <div>
-                        <div class="amt" style="color:${color}">
-                            ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
-                        </div>
-                        <div class="small">Bal: ${formatMoney(t._running)}</div>
-                    </div>
+        <div class="type" style="background:${color}"></div>
+        <div class="meta">
+            <div style="display:flex;justify-content:space-between">
+                <div>
+                    <div style="font-weight:800">${t.type === 'received' ? 'IN' : 'OUT'}</div>
+                    <div class="note">${escapeHtml(t.note || '')}</div>
                 </div>
-                <div class="time">${formatShort(t.ts)}</div>
+                <div>
+                    <div class="amt" style="color:${color}">
+                        ${t.type === 'received' ? '+' : '-'}${formatMoney(t.amount).replace('₹', '')}
+                    </div>
+                    <div class="small">Bal: ${formatMoney(t._running)}</div>
+                </div>
             </div>
-        `;
+            <div class="time">${formatShort(t.ts)}</div>
+        </div>
+    `;
 
                 const actions = document.createElement('div');
                 actions.className = 'actions';
+
                 const del = document.createElement('button');
                 del.className = 'btn-ghost';
                 del.textContent = 'Delete';
                 del.onclick = () => {
                     if (confirm('Delete transaction?')) removeTx(p.id, t.id);
                 };
+
                 actions.appendChild(del);
                 node.appendChild(actions);
                 txList.appendChild(node);
             });
+
         }
 
 
