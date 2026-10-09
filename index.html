@@ -157,7 +157,8 @@
         .controls {
             margin-left: auto;
             display: flex;
-            gap: 8px
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -254,7 +255,6 @@
             margin-left: 8px
         }
 
-        /* right column */
         .right {
             display: flex;
             flex-direction: column;
@@ -291,15 +291,6 @@
             text-align: center
         }
 
-        .share-btn {
-            background: linear-gradient(90deg, #25D366, #1DA851);
-            border: 0;
-            color: white;
-            padding: 8px 10px;
-            border-radius: 8px;
-            cursor: pointer
-        }
-
         .footer {
             margin-top: 12px;
             color: var(--muted);
@@ -318,12 +309,13 @@
                 <div class="small">Select a person, view balance & transactions, add new entries quickly.</div>
             </div>
             <div class="controls">
-                <button id="exportCSV" class="btn-ghost">Export CSV</button>
+                <button id="copyJson" class="btn-ghost">Copy JSON</button>
+                <button id="pasteJson" class="btn-ghost">Paste JSON</button>
                 <button id="clearAll" class="btn-ghost">Clear All</button>
             </div>
         </div>
 
-        <!-- Grocery List Panel (Dark Themed, Polished, Undo Support, Strikethrough) -->
+        <!-- Grocery List Panel -->
         <div class="panel" id="groceryUI" style="margin-top:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
                 <div class="small" style="font-weight:600">Grocery / Temporary List</div>
@@ -361,16 +353,13 @@
             const deselectAllGroceryBtn = document.getElementById('deselectAllGrocery');
             const groceryTotalEl = document.getElementById('groceryTotal');
 
-            // Save to localStorage
             function saveGrocery() { localStorage.setItem('pl_grocery', JSON.stringify(groceryList)); }
 
-            // Update total amount
             function updateTotalAmount() {
                 const total = groceryList.reduce((s, x) => s + (x.amount || 0), 0);
                 groceryTotalEl.textContent = 'Total Amount: ₹' + total;
             }
 
-            // Render grocery list
             function renderGrocery() {
                 groceryListDiv.innerHTML = '';
                 if (!groceryList.length) {
@@ -402,7 +391,6 @@
 
                     groceryListDiv.appendChild(node);
 
-                    // Toggle strikethrough
                     const nameDiv = node.querySelector('.grocery-name');
                     nameDiv.addEventListener('click', () => {
                         item.done = !item.done;
@@ -411,7 +399,6 @@
                         saveGrocery();
                     });
 
-                    // Amount input handling
                     const amtInput = document.getElementById(`amt_${item.id}`);
                     amtInput.addEventListener('input', () => {
                         const val = Number(amtInput.value);
@@ -429,7 +416,6 @@
                         }
                     });
 
-                    // Delete item
                     document.getElementById(`del_${item.id}`).onclick = () => {
                         lastDeletedItem = { ...item };
                         groceryList = groceryList.filter(x => x.id !== item.id);
@@ -441,7 +427,6 @@
                 updateTotalAmount();
             }
 
-            // Add new item
             function addGroceryItem() {
                 const name = groceryNewItem.value.trim();
                 if (!name) return alert('Enter item name');
@@ -454,7 +439,6 @@
             addGroceryItemBtn.onclick = addGroceryItem;
             groceryNewItem.addEventListener('keydown', e => { if (e.key === 'Enter') addGroceryItem(); });
 
-            // Assign selected items (always 'Gave')
             assignGroceryBtn.onclick = () => {
                 if (!selectedId) return alert('Select a person first');
                 const p = people.find(x => x.id === selectedId);
@@ -477,14 +461,12 @@
                 renderGrocery();
             };
 
-            // Share via WhatsApp (always 'Gave')
             copyGroceryBtn.onclick = async () => {
                 if (!groceryList.length) {
                     alert("No items to copy!");
                     return;
                 }
 
-                // Build the formatted grocery list text
                 let msg = "🛒 *Grocery List*\n\n";
                 groceryList.forEach(item => {
                     msg += `• ${item.name}${item.amount ? ' — ₹' + item.amount : ''} \n`;
@@ -499,9 +481,6 @@
                 }
             };
 
-
-
-            // Undo last deletion
             undoGroceryBtn.onclick = () => {
                 if (!lastDeletedItem) return alert('Nothing to undo');
                 groceryList.push(lastDeletedItem);
@@ -510,19 +489,13 @@
                 renderGrocery();
             };
 
-            // Select/Deselect all
             selectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = true);
             deselectAllGroceryBtn.onclick = () => groceryList.forEach(item => document.getElementById(`chk_${item.id}`).checked = false);
 
-            // Initial render
             renderGrocery();
 
-            // Escape HTML
             function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[c])); }
         </script>
-
-
-
 
         <div class="toprow">
             <div class="dropdown" id="personDropdown">
@@ -575,7 +548,6 @@
                             </div>
                         </div>
 
-                        <!-- Date Filter -->
                         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
                             <select id="txDateFilter" style="padding:8px;border-radius:10px;
                    border:1px solid rgba(255,255,255,0.04);
@@ -587,14 +559,11 @@
                             </select>
                         </div>
 
-
-                        <!-- Transaction Search -->
                         <div style="margin-top:12px;margin-bottom:8px;">
                             <input id="txSearch" placeholder="Search transactions (note, amount, IN / OUT)..." style="width:100%;padding:10px;border-radius:10px;
                   border:1px solid rgba(255,255,255,0.04);
                   background:transparent;color:inherit;">
                         </div>
-
 
                         <div class="tx-list" id="txList"></div>
                     </div>
@@ -602,7 +571,6 @@
             </div>
 
             <aside class="right">
-
                 <div class="panel">
                     <div class="small">Add transaction</div>
                     <div style="height:8px"></div>
@@ -622,7 +590,6 @@
                                 </label>
                             </div>
                         </div>
-
                     </div>
                     <div style="height:8px"></div>
                     <div class="form-row">
@@ -637,7 +604,6 @@
                             <label class="small">Date & Time</label>
                             <input id="txDatetime" type="text" disabled />
                         </div>
-
                         <div style="display:flex;align-items:flex-end">
                             <button id="addTx" class="btn" style="height:44px">Add</button>
                         </div>
@@ -649,7 +615,6 @@
                     <div style="height:8px"></div>
                     <div id="quickList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
                 </div>
-
             </aside>
         </div>
 
@@ -657,12 +622,10 @@
     </div>
 
     <script>
-        // Storage
         const PEOPLE_KEY = 'pl_people_v2';
         let people = [];
         let selectedId = null;
 
-        // Elements
         const ddToggle = document.getElementById('ddToggle'),
             ddMenu = document.getElementById('ddMenu'),
             ddSearch = document.getElementById('ddSearch'),
@@ -680,16 +643,15 @@
             txList = document.getElementById('txList'),
             addTxBtn = document.getElementById('addTx'),
             txAmount = document.getElementById('txAmount'),
-            txType = document.getElementById('txType'),
             txNote = document.getElementById('txNote'),
             txDatetime = document.getElementById('txDatetime'),
-            exportCSV = document.getElementById('exportCSV'),
+            copyJson = document.getElementById('copyJson'),
+            pasteJson = document.getElementById('pasteJson'),
             clearAll = document.getElementById('clearAll'),
             sharePerson = document.getElementById('sharePerson'),
             deletePerson = document.getElementById('deletePerson'),
             quickList = document.getElementById('quickList');
 
-        // Utils
         const uid = () => 'id_' + Math.random().toString(36).slice(2, 9);
         const nowISO = () => new Date().toISOString();
         const formatMoney = n => '₹' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -736,7 +698,7 @@
                 amount: Math.abs(a),
                 type,
                 note: note || '',
-                ts: nowISO() // auto timestamp
+                ts: nowISO()
             };
 
             p.transactions.push(tx);
@@ -824,7 +786,7 @@
             pName.textContent = p.name;
             pCreated.textContent = 'Created: ' + formatShort(p.created);
             pTotal.textContent = formatMoney(p.balance);
-            txDatetime.value = formatShort(nowISO()); // show current date/time by default
+            txDatetime.value = formatShort(nowISO());
             if (txSearch) txSearch.value = '';
             renderTxList(p);
             updateTotals();
@@ -842,25 +804,21 @@
             });
         }
 
-
         function renderTxList(p, query = '') {
             txList.innerHTML = '';
             const q = query.toLowerCase();
             const mode = txDateFilter?.value || 'all';
 
-            // 1️⃣ Full chronological list (NO FILTERS)
             const full = p.transactions
                 .slice()
                 .sort((a, b) => new Date(a.ts) - new Date(b.ts));
 
-            // 2️⃣ Compute running balance on FULL data
             let running = 0;
             full.forEach(t => {
                 running += t.type === 'received' ? t.amount : -t.amount;
                 t._running = running;
             });
 
-            // 3️⃣ Apply filters ONLY for display
             const visible = full.filter(t => {
                 if (!filterByDate(t, mode)) return false;
                 if (!q) return true;
@@ -876,13 +834,11 @@
                 return;
             }
 
-            // 4️⃣ Show latest → oldest
             let lastMonth = null;
 
             visible.slice().reverse().forEach(t => {
                 const currentMonth = monthKey(t.ts);
 
-                // 🔹 Month separator
                 if (currentMonth !== lastMonth) {
                     const sep = document.createElement('div');
                     sep.style.margin = '14px 0 8px';
@@ -902,7 +858,6 @@
                     lastMonth = currentMonth;
                 }
 
-                // 🔹 Transaction row
                 const node = document.createElement('div');
                 node.className = 'tx';
                 const color = t.type === 'received' ? 'var(--success)' : 'var(--danger)';
@@ -940,12 +895,9 @@
                 node.appendChild(actions);
                 txList.appendChild(node);
             });
-
         }
 
-
         const txSearch = document.getElementById('txSearch');
-
         txSearch.addEventListener('input', () => {
             if (!selectedId) return;
             const p = people.find(x => x.id === selectedId);
@@ -953,9 +905,7 @@
             renderTxList(p, txSearch.value);
         });
 
-
         const txDateFilter = document.getElementById('txDateFilter');
-
         function filterByDate(tx, mode) {
             const d = new Date(tx.ts);
             const now = new Date();
@@ -963,21 +913,17 @@
             if (mode === 'today') {
                 return d.toDateString() === now.toDateString();
             }
-
             if (mode === 'month') {
                 return d.getMonth() === now.getMonth() &&
                     d.getFullYear() === now.getFullYear();
             }
-
             if (mode === 'lastMonth') {
                 const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
                 return d.getMonth() === lm.getMonth() &&
                     d.getFullYear() === lm.getFullYear();
             }
-
             return true;
         }
-
 
         txDateFilter.addEventListener('change', () => {
             if (!selectedId) return;
@@ -986,9 +932,7 @@
             renderTxList(p, txSearch.value);
         });
 
-
         const settleUpBtn = document.getElementById('settleUp');
-
         settleUpBtn.onclick = () => {
             if (!selectedId) return;
             const p = people.find(x => x.id === selectedId);
@@ -1002,9 +946,6 @@
             addTx(p.id, amt, type, 'Settlement');
         };
 
-
-
-        // dropdown open/close
         function openDropdown() { ddMenu.style.display = 'block'; ddSearch.focus(); }
         function closeDropdown() { ddMenu.style.display = 'none'; ddSearch.value = ''; renderDropdown(); }
         ddToggle.addEventListener('click', () => { ddMenu.style.display === 'block' ? closeDropdown() : openDropdown(); });
@@ -1012,18 +953,15 @@
         ddSearch.addEventListener('input', e => renderDropdown(e.target.value));
         ddAdd.addEventListener('click', () => { createPerson(ddNewName.value); ddNewName.value = ''; closeDropdown(); });
 
-        // actions
         addTxBtn.onclick = () => {
             if (!selectedId) return alert('Select a person first');
             const amt = txAmount.value;
-            // Get radio value instead of select
             const type = document.querySelector('input[name="txTypeRadio"]:checked').value;
             const note = txNote.value;
-            addTx(selectedId, amt, type, note); // date/time auto
+            addTx(selectedId, amt, type, note);
             txAmount.value = ''; txNote.value = '';
-            txDatetime.value = formatShort(nowISO()); // reset to current
+            txDatetime.value = formatShort(nowISO());
         };
-
 
         deletePerson.addEventListener('click', () => { if (!selectedId) return; deletePersonById(selectedId); });
 
@@ -1031,7 +969,6 @@
             const p = people.find(x => x.id === selectedId);
             if (!p) return alert("Select a person first!");
 
-            // Build formatted ledger text
             let msg = `📒 ${p.name}'s Account\n`;
             msg += `Balance: ${formatMoney(p.balance)}\n\n`;
 
@@ -1055,29 +992,68 @@
             }
         };
 
-        exportCSV.addEventListener('click', () => {
-            let rows = ['person,tx_id,tx_ts,tx_type,amount,note'];
-            people.forEach(p => p.transactions.forEach(t => rows.push(`${escapeCsv(p.name)},${t.id},${t.ts},${t.type},${t.amount},${escapeCsv(t.note)}`)));
-            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'personal_ledger.csv'; a.click();
-        });
+        // --- JSON IMPORT / EXPORT LOGIC ---
+        copyJson.addEventListener('click', async () => {
+            const backupData = {
+                pl_people_v2: JSON.parse(localStorage.getItem('pl_people_v2') || '[]'),
+                pl_grocery: JSON.parse(localStorage.getItem('pl_grocery') || '[]')
+            };
 
-        clearAll.addEventListener('click', () => {
-            if (confirm('Clear all people and transactions?')) {
-                people = []; save(); renderDropdown(); renderQuick(); showPerson(null); updateTotals();
+            const jsonString = JSON.stringify(backupData, null, 2);
+
+            try {
+                await navigator.clipboard.writeText(jsonString);
+                alert("✅ Full backup JSON copied to clipboard!");
+            } catch (err) {
+                console.error(err);
+                alert("❌ Failed to copy. Check browser permissions.");
             }
         });
 
-        function escapeCsv(s) { return '"' + String(s || '').replace(/"/g, '""') + '"'; }
+        pasteJson.addEventListener('click', () => {
+            const inputString = prompt("Paste your JSON backup string here:");
+            if (!inputString) return;
+
+            try {
+                const parsed = JSON.parse(inputString);
+                
+                // Validate structure
+                if (parsed.pl_people_v2 && Array.isArray(parsed.pl_people_v2)) {
+                    localStorage.setItem('pl_people_v2', JSON.stringify(parsed.pl_people_v2));
+                }
+                if (parsed.pl_grocery && Array.isArray(parsed.pl_grocery)) {
+                    localStorage.setItem('pl_grocery', JSON.stringify(parsed.pl_grocery));
+                }
+
+                alert("✅ Data successfully imported!");
+                location.reload(); // Reload page to reflect imported data
+            } catch (e) {
+                console.error(e);
+                alert("❌ Invalid JSON format. Import failed.");
+            }
+        });
+
+        clearAll.addEventListener('click', () => {
+            if (confirm('Clear all people, transactions, and grocery lists?')) {
+                localStorage.removeItem(PEOPLE_KEY);
+                localStorage.removeItem('pl_grocery');
+                people = []; 
+                groceryList = [];
+                renderDropdown(); 
+                renderQuick(); 
+                renderGrocery();
+                showPerson(null); 
+                updateTotals();
+            }
+        });
+
         function initials(name) { return name.split(' ').map(x => x[0] || '').join('').slice(0, 2).toUpperCase(); }
         function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[c])); }
 
-        // init
         load();
         if (people.length) selectPerson(people[0].id);
         window.PL = { people, load, save };
     </script>
-
 </body>
 
 </html>
