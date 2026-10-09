@@ -315,6 +315,16 @@
             </div>
         </div>
 
+        <!-- JSON Import Panel (Hidden by default, shows when Paste JSON is clicked) -->
+        <div class="panel" id="jsonImportPanel" style="display:none; margin-top:16px; border: 1px solid var(--accent);">
+            <div style="font-weight:600; margin-bottom:8px;">Paste Backup JSON Below:</div>
+            <textarea id="jsonTextarea" rows="6" placeholder="Paste your full backup JSON string here..." style="width:100%; padding:10px; border-radius:10px; border:1px solid rgba(255, 255, 255, 0.04); background:transparent; color:inherit; resize:vertical; font-family:monospace;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="confirmImport" class="btn">Confirm Import</button>
+                <button id="cancelImport" class="btn-ghost">Cancel</button>
+            </div>
+        </div>
+
         <!-- Grocery List Panel -->
         <div class="panel" id="groceryUI" style="margin-top:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
@@ -650,7 +660,11 @@
             clearAll = document.getElementById('clearAll'),
             sharePerson = document.getElementById('sharePerson'),
             deletePerson = document.getElementById('deletePerson'),
-            quickList = document.getElementById('quickList');
+            quickList = document.getElementById('quickList'),
+            jsonImportPanel = document.getElementById('jsonImportPanel'),
+            jsonTextarea = document.getElementById('jsonTextarea'),
+            confirmImport = document.getElementById('confirmImport'),
+            cancelImport = document.getElementById('cancelImport');
 
         const uid = () => 'id_' + Math.random().toString(36).slice(2, 9);
         const nowISO = () => new Date().toISOString();
@@ -1011,13 +1025,23 @@
         });
 
         pasteJson.addEventListener('click', () => {
-            const inputString = prompt("Paste your JSON backup string here:");
-            if (!inputString) return;
+            jsonImportPanel.style.display = 'block';
+            jsonTextarea.value = '';
+            jsonTextarea.focus();
+        });
+
+        cancelImport.addEventListener('click', () => {
+            jsonImportPanel.style.display = 'none';
+            jsonTextarea.value = '';
+        });
+
+        confirmImport.addEventListener('click', () => {
+            const inputString = jsonTextarea.value.trim();
+            if (!inputString) return alert('Please paste your JSON text first.');
 
             try {
                 const parsed = JSON.parse(inputString);
                 
-                // Validate structure
                 if (parsed.pl_people_v2 && Array.isArray(parsed.pl_people_v2)) {
                     localStorage.setItem('pl_people_v2', JSON.stringify(parsed.pl_people_v2));
                 }
@@ -1026,7 +1050,7 @@
                 }
 
                 alert("✅ Data successfully imported!");
-                location.reload(); // Reload page to reflect imported data
+                location.reload(); 
             } catch (e) {
                 console.error(e);
                 alert("❌ Invalid JSON format. Import failed.");
