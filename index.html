@@ -179,6 +179,11 @@
             cursor: pointer
         }
 
+        #totalAll {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
         .content {
             display: grid;
             grid-template-columns: 1fr 380px;
@@ -570,25 +575,27 @@
         </script>
 
         <div class="toprow">
-            <div class="dropdown" id="personDropdown">
-                <div class="dd-toggle" id="ddToggle" tabindex="0">
-                    <div class="label" id="selectedLabel">Select a person...</div>
-                    <div class="small" style="opacity:0.9">▾</div>
-                </div>
-                <div class="dd-menu" id="ddMenu" style="display:none">
-                    <div class="dd-search"><input id="ddSearch" placeholder="Search or add..." /></div>
-                    <div class="dd-list" id="ddList"></div>
-                    <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.02);display:flex;gap:8px">
-                        <input id="ddNewName" placeholder="Add new person"
-                            style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
-                        <button id="ddAdd" class="btn">Add</button>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+                <div class="dropdown" id="personDropdown">
+                    <div class="dd-toggle" id="ddToggle" tabindex="0">
+                        <div class="label" id="selectedLabel">Select a person...</div>
+                        <div class="small" style="opacity:0.9">▾</div>
+                    </div>
+                    <div class="dd-menu" id="ddMenu" style="display:none">
+                        <div class="dd-search"><input id="ddSearch" placeholder="Search or add..." /></div>
+                        <div class="dd-list" id="ddList"></div>
+                        <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.02);display:flex;gap:8px">
+                            <input id="ddNewName" placeholder="Add new person"
+                                style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
+                            <button id="ddAdd" class="btn">Add</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
-                <div class="small">Grand total:</div>
-                <div class="big" id="totalAll">₹0.00</div>
+                <div style="display:flex;gap:8px;align-items:center;padding-left:2px;">
+                    <div class="small">Grand total:</div>
+                    <div class="big" id="totalAll">₹0.00</div>
+                </div>
             </div>
         </div>
 
