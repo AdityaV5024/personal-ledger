@@ -297,6 +297,68 @@
             font-size: 13px;
             text-align: center
         }
+
+        /* Wallet Panel Styles */
+        .wallet-row {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr 32px;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .wallet-row input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+            color: inherit;
+            font-size: 14px;
+        }
+
+        .wallet-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .wallet-row input[readonly] {
+            opacity: 0.78;
+            background: rgba(255, 255, 255, 0.01);
+            cursor: not-allowed;
+        }
+
+        .wallet-del {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .wallet-lock-badge {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .wallet-total-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-weight: 700;
+        }
     </style>
 </head>
 
@@ -620,10 +682,16 @@
                     </div>
                 </div>
 
-                <div class="panel">
-                    <div class="small">Quick people</div>
-                    <div style="height:8px"></div>
-                    <div id="quickList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                <div class="panel" id="walletPanel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div class="small" style="font-weight:600;">💎 Wallet (INR)</div>
+                        <button id="addWalletRowBtn" class="btn" style="padding:5px 10px;font-size:12px;">+ Add</button>
+                    </div>
+                    <div id="walletRows"></div>
+                    <div class="wallet-total-bar">
+                        <span class="small" style="font-weight:600;">Total Wallet</span>
+                        <span id="walletTotal" style="color:var(--success);font-size:16px;">₹0.00</span>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -633,7 +701,9 @@
 
     <script>
         const PEOPLE_KEY = 'pl_people_v2';
+        const WALLET_KEY = 'pl_wallet_inr_v1';
         let people = [];
+        let walletItems = [];
         let selectedId = null;
 
         const ddToggle = document.getElementById('ddToggle'),
@@ -660,23 +730,150 @@
             clearAll = document.getElementById('clearAll'),
             sharePerson = document.getElementById('sharePerson'),
             deletePerson = document.getElementById('deletePerson'),
-            quickList = document.getElementById('quickList'),
             jsonImportPanel = document.getElementById('jsonImportPanel'),
             jsonTextarea = document.getElementById('jsonTextarea'),
             confirmImport = document.getElementById('confirmImport'),
-            cancelImport = document.getElementById('cancelImport');
+            cancelImport = document.getElementById('cancelImport'),
+            walletRowsEl = document.getElementById('walletRows'),
+            walletTotalEl = document.getElementById('walletTotal'),
+            addWalletRowBtn = document.getElementById('addWalletRowBtn');
 
         const uid = () => 'id_' + Math.random().toString(36).slice(2, 9);
         const nowISO = () => new Date().toISOString();
-        const formatMoney = n => '₹' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formatMoney = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const formatShort = ts => new Date(ts).toLocaleString();
 
+        /* ================= WALLET (INR) ================= */
+        function getGrandTotal() {
+            return people.reduce((s, p) => s + (p.balance || 0), 0);
+        }
+
+        function getLockedBalanceValue() {
+            const grand = getGrandTotal();
+            return grand === 0 ? 0 : -grand;
+        }
+
+        function ensureLockedBalanceRow() {
+            const lockedVal = getLockedBalanceValue();
+            // Remove any duplicate "Balance" rows if present
+            walletItems = walletItems.filter(item => !item.locked && item.name !== 'Balance');
+            walletItems.unshift({
+                name: 'Balance',
+                inr: lockedVal,
+                locked: true
+            });
+        }
+
+        function syncLockedBalanceRow() {
+            ensureLockedBalanceRow();
+            const lockedVal = getLockedBalanceValue();
+            const lockedInput = document.getElementById('walletLockedBalanceInput');
+            if (lockedInput) {
+                lockedInput.value = lockedVal;
+            }
+            saveWallet();
+            updateWalletTotal();
+        }
+
+        function saveWallet() {
+            ensureLockedBalanceRow();
+            localStorage.setItem(WALLET_KEY, JSON.stringify(walletItems));
+        }
+
+        function updateWalletTotal() {
+            ensureLockedBalanceRow();
+            const sum = walletItems.reduce((acc, item) => {
+                if (item.locked) return acc + getLockedBalanceValue();
+                return acc + (parseFloat(item.inr) || 0);
+            }, 0);
+            walletTotalEl.textContent = formatMoney(sum);
+        }
+
+        function renderWallet() {
+            ensureLockedBalanceRow();
+            walletRowsEl.innerHTML = '';
+
+            walletItems.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'wallet-row';
+
+                const nameInp = document.createElement('input');
+                nameInp.type = 'text';
+                nameInp.placeholder = 'Account / Cash';
+                nameInp.value = item.name || '';
+
+                const amtInp = document.createElement('input');
+                amtInp.type = 'number';
+                amtInp.step = 'any';
+                amtInp.placeholder = '0.00';
+
+                if (item.locked) {
+                    nameInp.value = 'Balance';
+                    nameInp.readOnly = true;
+                    amtInp.id = 'walletLockedBalanceInput';
+                    amtInp.value = getLockedBalanceValue();
+                    amtInp.readOnly = true;
+
+                    const lockBadge = document.createElement('div');
+                    lockBadge.className = 'wallet-lock-badge';
+                    lockBadge.title = 'Locked to Grand Total * -1';
+                    lockBadge.textContent = '🔒';
+
+                    row.appendChild(nameInp);
+                    row.appendChild(amtInp);
+                    row.appendChild(lockBadge);
+                } else {
+                    nameInp.oninput = () => {
+                        // Prevent renaming another item to "Balance"
+                        if (nameInp.value.trim().toLowerCase() === 'balance') {
+                            nameInp.value = 'Balance (Other)';
+                        }
+                        walletItems[idx].name = nameInp.value;
+                        saveWallet();
+                    };
+
+                    amtInp.value = item.inr !== '' && item.inr !== undefined ? item.inr : '';
+                    amtInp.oninput = () => {
+                        walletItems[idx].inr = amtInp.value;
+                        saveWallet();
+                        updateWalletTotal();
+                    };
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'wallet-del';
+                    delBtn.textContent = '✖';
+                    delBtn.onclick = () => {
+                        walletItems.splice(idx, 1);
+                        saveWallet();
+                        renderWallet();
+                    };
+
+                    row.appendChild(nameInp);
+                    row.appendChild(amtInp);
+                    row.appendChild(delBtn);
+                }
+
+                walletRowsEl.appendChild(row);
+            });
+
+            updateWalletTotal();
+        }
+
+        addWalletRowBtn.addEventListener('click', () => {
+            walletItems.push({ name: '', inr: '', locked: false });
+            saveWallet();
+            renderWallet();
+        });
+
+        /* ================= LEDGER ================= */
         function load() {
             try { people = JSON.parse(localStorage.getItem(PEOPLE_KEY) || '[]'); }
             catch { people = []; }
+            try { walletItems = JSON.parse(localStorage.getItem(WALLET_KEY) || '[]'); }
+            catch { walletItems = []; }
             renderDropdown();
-            renderQuick();
             updateTotals();
+            renderWallet();
         }
 
         function save() { localStorage.setItem(PEOPLE_KEY, JSON.stringify(people)); }
@@ -687,7 +884,6 @@
             people.push(p);
             save();
             renderDropdown();
-            renderQuick();
             selectPerson(p.id);
         }
 
@@ -696,7 +892,6 @@
             people = people.filter(p => p.id !== id);
             save();
             renderDropdown();
-            renderQuick();
             selectedId = null;
             showPerson(null);
         }
@@ -719,7 +914,6 @@
             p.balance = p.transactions.reduce((s, t) => s + (t.type === 'received' ? t.amount : -t.amount), 0);
             save();
             renderDropdown();
-            renderQuick();
             selectPerson(personId);
         }
 
@@ -730,7 +924,6 @@
             p.balance = p.transactions.reduce((s, t) => s + (t.type === 'received' ? t.amount : -t.amount), 0);
             save();
             renderDropdown();
-            renderQuick();
             selectPerson(personId);
         }
 
@@ -762,21 +955,10 @@
             });
         }
 
-        function renderQuick() {
-            quickList.innerHTML = '';
-            people.slice(0, 8).forEach(p => {
-                const b = document.createElement('button');
-                b.className = 'btn-ghost';
-                b.style.padding = '8px 10px';
-                b.textContent = p.name + ' • ' + formatMoney(p.balance);
-                b.onclick = () => selectPerson(p.id);
-                quickList.appendChild(b);
-            });
-        }
-
         function updateTotals() {
-            const total = people.reduce((s, p) => s + (p.balance || 0), 0);
+            const total = getGrandTotal();
             totalAllEl.textContent = formatMoney(total);
+            syncLockedBalanceRow();
         }
 
         function selectPerson(id) {
@@ -1008,9 +1190,11 @@
 
         // --- JSON IMPORT / EXPORT LOGIC ---
         copyJson.addEventListener('click', async () => {
+            ensureLockedBalanceRow();
             const backupData = {
                 pl_people_v2: JSON.parse(localStorage.getItem('pl_people_v2') || '[]'),
-                pl_grocery: JSON.parse(localStorage.getItem('pl_grocery') || '[]')
+                pl_grocery: JSON.parse(localStorage.getItem('pl_grocery') || '[]'),
+                pl_wallet_inr_v1: walletItems
             };
 
             const jsonString = JSON.stringify(backupData, null, 2);
@@ -1048,6 +1232,9 @@
                 if (parsed.pl_grocery && Array.isArray(parsed.pl_grocery)) {
                     localStorage.setItem('pl_grocery', JSON.stringify(parsed.pl_grocery));
                 }
+                if (parsed.pl_wallet_inr_v1 && Array.isArray(parsed.pl_wallet_inr_v1)) {
+                    localStorage.setItem(WALLET_KEY, JSON.stringify(parsed.pl_wallet_inr_v1));
+                }
 
                 alert("✅ Data successfully imported!");
                 location.reload(); 
@@ -1061,13 +1248,15 @@
             if (confirm('Clear all people, transactions, and grocery lists?')) {
                 localStorage.removeItem(PEOPLE_KEY);
                 localStorage.removeItem('pl_grocery');
+                localStorage.removeItem(WALLET_KEY);
                 people = []; 
                 groceryList = [];
+                walletItems = [];
                 renderDropdown(); 
-                renderQuick(); 
                 renderGrocery();
                 showPerson(null); 
                 updateTotals();
+                renderWallet();
             }
         });
 
@@ -1076,7 +1265,7 @@
 
         load();
         if (people.length) selectPerson(people[0].id);
-        window.PL = { people, load, save };
+        window.PL = { people, walletItems, load, save, saveWallet };
     </script>
 </body>
 
